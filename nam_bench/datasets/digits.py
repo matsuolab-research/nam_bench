@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
-from .utils import motions
+import nam_bench.datasets.utils.motions as motions
 
 
 class Digits(Dataset):
