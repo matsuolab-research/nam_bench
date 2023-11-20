@@ -4,8 +4,8 @@ from functools import partial
 
 from torch.utils.data import Dataset
 
-import src.metrics as custom_metrics
-from src import datasets, callbacks
+import nam_bench.metrics as custom_metrics
+from nam_bench import datasets, callbacks
 
 
 def rec_getattr(obj, attr):

@@ -15,7 +15,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from src import utils
+from nam_bench import utils
 
 
 class Config:
