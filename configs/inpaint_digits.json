@@ -1,0 +1,14 @@
+{
+    "metrics": ["mse", "mse_metainfowise", "mae"],
+    "dataset_config": {
+        "dataset_name": "DigitsForInpainting",
+        "mask_size": 4
+    },
+    "batch_size": 32,
+    "callbacks": {
+        "save_input_imgs": {
+        },
+        "save_output_imgs": {
+        }
+    }
+}

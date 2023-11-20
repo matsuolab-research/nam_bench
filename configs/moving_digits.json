@@ -1,0 +1,18 @@
+{
+    "metrics": ["mse", "mse_classwise", "mae", "mse_last_frame", "mse_last_frame_classwise"],
+    "dataset_config": {
+        "dataset_name": "MaskedMovingDigits",
+        "speeds": [2.0, 4.0],
+        "thetas": [0.0, 0.25, 0.5, 0.75],
+        "binarize": false,
+        "normalize": true,
+        "img_size": 20,
+        "seq_length": 4
+    },
+    "batch_size": 32,
+    "callbacks": {
+        "save_input_output_imgs": {
+
+        }
+    }
+}

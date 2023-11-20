@@ -1,0 +1,7 @@
+{
+    "metrics": ["f1", "recall", "precision", "accuracy"],
+    "dataset_config": {
+        "dataset_name": "Digits"
+    },
+    "batch_size": 32
+}
