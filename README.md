@@ -2,6 +2,8 @@
 
 ## 目次
 1. 動かし方
+      1. インポートして使用する場合
+      2. パッケージとして使用する場合
 2. サポート範囲
       1. データセット
       2. メトリック
@@ -13,7 +15,10 @@
      4. カスタムコールバック
 
 
+
+
 # 1. 動かし方
+## 1.1
 基本的にはdemo.pyの通り.  
 ユーザは、
 * config_pathにconfigsディレクトリ以下のファイルの内から1つを指定  
@@ -27,8 +32,23 @@ eval_op = eval_utils.Evaluation(model=model, config_path=config_path)
 eval_op.evaluate(output_dir=output_dir)
 ```
 
-評価結果はoutput_dirに"%Y%m%d%H%M%S"形式でディレクトリが作られ,result.csvとして各種表結果が保存されます.
+評価結果はoutput_dirに"%Y%m%d%H%M%S"形式でディレクトリが作られ,result.csvとして各種表結果が保存されます.  
 callback関数がconfigに追加されている場合は,入出力結果もimgsディレクトリに保存されます.
+
+## 1.2
+パッケージとして扱う場合は
+
+```bash
+git clone ...
+cd ./nam_bench
+git checkout sasaki-eval
+pip install .
+```
+
+を実行することによって,demo_package.pyのように扱えます.  
+一度パッケージとしてインストールすることができれば,細かいpathの設定をしなくて済むのでおすすめです.
+
+
 
 # 2. サポート範囲
 現状では,configファイルに指定可能なデータセット・メトリック・コールバック関数としては以下の通りになります.
