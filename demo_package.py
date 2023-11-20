@@ -1,6 +1,5 @@
 import torch
-
-from nam_bench import eval_utils
+import nam_bench
 
 
 if __name__ == "__main__":
@@ -11,5 +10,5 @@ if __name__ == "__main__":
     model = lambda x: x + 0.1*torch.randn_like(x) # Reconstruction model
     # model = lambda x: torch.randint(0, 10, size=(len(x), )) # Classification model
     
-    eval_op = eval_utils.Evaluation(model=model, config_path=config_path)
+    eval_op = nam_bench.Evaluation(model=model, config_path=config_path)
     eval_op.evaluate(output_dir=output_dir)
