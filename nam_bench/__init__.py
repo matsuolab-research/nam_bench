@@ -1,1 +1,1 @@
-from .eval_utils import Config, Evaluation
+from .eval_utils import Config, Evaluator

@@ -4,6 +4,9 @@ import json
 from datetime import datetime
 import warnings
 from types import SimpleNamespace
+from collections import OrderedDict
+import pprint
+import functools
 
 import numpy as np
 import torch
@@ -15,7 +18,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from nam_bench import utils
+from . import utils, const
+
+# TODO: metricsという名前ではあるが、画像化の処理なども含まれているので、名前を変更/分割する
 
 
 class Config:
@@ -51,79 +56,135 @@ class Config:
         return config
         
     def _sanitiy_check(self, config: object):
-        if not hasattr(config, "batch_size"):
-            warnings.warn("batch_size is not in config file. Set batch_size to 32")
-            self.batch_size = 32
-
         if not hasattr(config, "dataset_config"):
             raise ValueError("dataset_config is not in config file. Please specify dataset_config in config file")
             
         if not hasattr(config.dataset_config, "dataset_name"):
             raise ValueError("dataset_name is not in config file. Please specify dataset_config.name in config file")
-        
-        if not hasattr(config, "metrics"):
-            raise ValueError("metrics is not in config file. Please specify metrics in config file")
 
 
-class Evaluation:
-    def __init__(self, model: callable, config_path: str):
-        """Evaluation class for evaluating model performance
+class Evaluator:
+    def __init__(self, config: Config|None = None):
+        """Evaluator class
 
         Args:
-            model (callable): A callable model which takes input of torch.Tensor and returns torch.Tensor
-            config_path (str): A path to json file which contains config for evaluation.
+            config (Config | None, optional): Evaluator configuration. Defaults to None.
         """
-        self.model = model
-        self.config = Config(config_path)
+        self.config = config
+        
+        # TODO: 以下のdatasetに関する処理は、Datasetクラスを作成して、そこに移す
+        self.dataset_name = None
+        self._dataset_fn = lambda x: x
+        self.__dataset_fn_kwargs = {}
+        self.__dataset_metadata = None
+        self.__target = None
+        self._default_eval_functions = {}
+        self._custom_eval_functions = {}
+    
+    def setup_with_config(self):
+        """Setup evaluator with config
+        """
+        self.set_dataset_fn(self.config.dataset_config.dataset_name)
+        self.__dataset_fn_kwargs = self.config.dataset_config.kwargs
+    
+    def get_config(self):
+        """Get config
 
-        self.dataset = utils.get_dataset(self.config.dataset_config) # {"dataset": Dataset, "name": str}
-        self.evaluator = utils.Evaluator(utils.get_metrics(self.config.metrics)) # callable which takes input of tuple of torch.Tensors and returns list[dict]
-        self.test_loader = DataLoader(
-            self.dataset.data,
-            batch_size=self.config.batch_size,
-            shuffle=False
-        )
-        self.callbacks = None
-        if hasattr(self.config, "callbacks"):
-            self.callbacks = utils.get_callbacks(self.config.callbacks)
-
-
-    def evaluate(self, output_dir: str) -> None:
-        """Evaluate model performance and dump result to csv or json file
+        Returns:
+            Config: A config
+        """
+        return {
+            "dataset_name": self.dataset_name,
+            "dataset_fn": self._dataset_fn.__name__,
+            "dataset_fn_kwargs": self.__dataset_fn_kwargs,
+        }
+    
+    def __str__(self):
+        output_str = "Evaluator: \n"
+        output_str += f"dataset_name: {self.dataset_name}\n"
+        output_str += f"dataset_fn: {self._dataset_fn.__name__}\n"
+        output_str += f"dataset_fn_kwargs: {self.__dataset_fn_kwargs}\n"
+        # output_str += f"dataset_metadata: {self._dataset_metadata}\n"
+        output_str += f"default evaluation functions: {pprint.pformat(list(self._default_eval_functions.keys()))}\n"
+        output_str += f"custom evaluation functions: {pprint.pformat(list(self._custom_eval_functions.keys()))}\n"
+        
+        return output_str
+    
+    def set_dataset_fn(self, dataset_name: str=None, dataset_fn: callable=None) -> None:
+        """Set dataset function
 
         Args:
-            output_dir (str): Output directory path
+            dataset_name (str): Name of dataset
+            dataset_fn (callable): A function which returns a dataset. 
+                                    dataset_fn must return a dict of 
+                                    {"train": {"X": dataset, "y": target, "metainfo": metainfo}, 
+                                    "test": {"X": dataset, "y": target, "metainfo": metainfo}}
+        """
+        if (dataset_name is None and dataset_fn is None) or (dataset_name is not None and dataset_fn is not None):
+            raise ValueError("Either dataset_name or dataset_fn must be specified")
+
+        if dataset_fn is not None:
+            self._dataset_fn = dataset_fn
+            self.dataset_name = dataset_fn.__name__
+            return
+        
+        self._dataset_fn = utils.get_dataset_fn(dataset_name)
+        self.dataset_name = dataset_name
+        for eval_fn_name in const.DATASET2DEFAULT_EVALS[dataset_name]:
+            self._default_eval_functions[eval_fn_name] = utils.get_metric(eval_fn_name)
+    
+    def get_dataset(self, *args, **kwargs):
+        """Get dataset
+        args and kwargs are passed to dataset_fn. See dataset_fn for more details
+        If some keyword arguments are already set in the dataset_fn_kwargs, they are overwritten by kwargs.
+
+        Returns:
+            Dataset: A dataset
+        """
+        self.__dataset_fn_kwargs.update(kwargs)
+        self._dataset_fn_ = utils.return_with_kwargs(self._dataset_fn) # Correspond to decorator
+        self.__dataset_fn_kwargs, datasets = self._dataset_fn_(*args, **self.__dataset_fn_kwargs)
+        self.__dataset_metadata = datasets["test"].get("metainfo", None)
+        self.__target = datasets["test"]["y"]
+
+        return datasets["test"]["X"]
+    
+    def add_custom_eval_function(self, function_name: str, function: callable, **kwargs) -> None:
+        """Add custom evaluation functions
+
+        Args:
+            function_name (str): Name of evaluation function
+            function (callable): A callable functions. 
+                                This function must take preds, ground_truths, metainfo and 
+                                return a dictionary of evaluation results.
+        """
+        if len(kwargs) > 0:
+            function = functools.partial(function, **kwargs)
+        self._custom_eval_functions[function_name] = function
+
+    def evaluate(self, preds: torch.Tensor) -> None:
+        """Evaluate predictions
+
+        Args:
+            preds (torch.Tensor): A tensor of predictions
         """
         now_str = datetime.now().strftime("%Y%m%d%H%M%S")
-        output_dir = osp.join(output_dir, now_str)
-        if not osp.exists(output_dir):
-            os.makedirs(output_dir)
-        print(f"Evaluation result will be saved to {output_dir}")
         
-        preds = []
-        ground_truths = []
-        for X, y in self.test_loader:
-            pred = self.model(X)
-            preds.append(pred)
-            ground_truths.append(y)
+        reports = OrderedDict()
+        reports["metainfo"] = OrderedDict(
+            date=now_str,
+            dataset_name=self.dataset_name,
+            dataset_kwargs=self.__dataset_fn_kwargs,
+            dataset_metadata=self.__dataset_metadata,
+        )
+        # TODO: 辞書のupdateを使うか, それとも辞書の中に辞書を入れるかを検討する
+        for fn_name, fn in self._default_eval_functions.items():
+            reports[fn_name] = fn(preds, self.__target, self.__dataset_metadata)
         
-        preds = torch.cat(preds, dim=0)
-        ground_truths = torch.cat(ground_truths, dim=0)
+        for fn_name, fn in self._custom_eval_functions.items():
+            reports[fn_name] = fn(preds, self.__target, self.__dataset_metadata)
         
-        if self.callbacks is not None:
-            callbacks_output_dir = osp.join(output_dir, "imgs")
-            if not osp.exists(callbacks_output_dir):
-                os.makedirs(callbacks_output_dir)
-            for callback in self.callbacks:
-                callback(
-                    preds=preds,
-                    inputs=ground_truths,
-                    metainfo=self.dataset.metainfo,
-                    output_dir=callbacks_output_dir,
-                )
-
-        reports = self.evaluator(preds, ground_truths, self.dataset.metainfo)
-        self._dump_result(output_dir, reports, save_as="csv")
+        return reports
     
     def _dump_result(
             self,
