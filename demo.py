@@ -53,9 +53,9 @@ if __name__ == "__main__":
     )
     
     # Add custom metrics here.
-    eval_op.add_custom_eval_function("mean", sample_custom_eval)
+    eval_op.add_custom_eval_fn("mean", sample_custom_eval)
     # save_imgs_kwargs = {"save_dir": "./imgs", "preprocess_func": img_preprocess_fn}
-    # eval_op.add_custom_eval_function("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
+    # eval_op.add_custom_eval_fn("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
     
     print(eval_op) # CHeck the evaluation configuration.
     

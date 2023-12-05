@@ -34,10 +34,8 @@ def img_preprocess_fn(preds: np.ndarray, labels: np.ndarray, metainfo: list[dict
 
 
 if __name__ == "__main__":
-    # NOTE: Modify config object if you want to change config, but not recommended for reproducibility.
-    # config = eval_utils.Config(config_path=config_path) 
-    
     eval_op = nam_bench.Evaluator()
+    
     eval_op.set_dataset_fn("MovingDigits")
     x = eval_op.get_dataset(
         num_train_data=10, # NOTE: This parameter does not influence the result of evaluation.
@@ -53,9 +51,13 @@ if __name__ == "__main__":
     )
     
     # Add custom metrics here.
-    eval_op.add_custom_eval_function("mean", sample_custom_eval)
-    # save_imgs_kwargs = {"save_dir": "./imgs", "preprocess_func": img_preprocess_fn}
-    # eval_op.add_custom_eval_function("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
+    eval_op.add_custom_eval_fn("mean", sample_custom_eval)
+    save_imgs_kwargs = {"save_dir": "./imgs", "preprocess_func": img_preprocess_fn}
+    eval_op.add_custom_eval_fn("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
+    
+    # NOTE: You can setup evaluator with config file as well.
+    # config = nam_bench.eval_utils.Config(config_path=config_path) 
+    # eval_op.setup_with_config(config)
     
     print(eval_op) # CHeck the evaluation configuration.
     
@@ -68,7 +70,8 @@ if __name__ == "__main__":
     preds = model(x)
     preds = preds.detach().numpy()
 
-    output_dict = eval_op.evaluate(preds)
-    # pprint(output_dict) # This is the evaluation result. You can use it for loggers, etc.
+    reports = eval_op.evaluate(preds)
+    # pprint(reports) # This is the evaluation result. You can use it for loggers, etc.
     # NOTE: Dataset metainfo can be long, so we do not print it here.
-    pprint({key: value for key, value in output_dict.items() if key != "metainfo"})
+    pprint({key: value for key, value in reports.items() if key != "metainfo"})
+    # You can use above reports for loggers, etc.
