@@ -149,7 +149,7 @@ class Evaluator:
 
         return datasets["test"]["X"]
     
-    def add_custom_eval_function(self, function_name: str, function: callable, **kwargs) -> None:
+    def add_custom_eval_fn(self, function_name: str, function: callable, **kwargs) -> None:
         """Add custom evaluation functions
 
         Args:
