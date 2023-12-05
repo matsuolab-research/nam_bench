@@ -101,7 +101,7 @@ reports = eval_op.evaluate(pred_y)
 ただし,辞書に登録する関数の返り値は以下の形式を要請します.(それ以外の値については実行時にエラーを吐きます)
 ```python
 {
-  "train": {"X": np.ndarray|None, "y": np.ndarray|None, "metainfo": None|list[dict]}
+  "train": {"X": np.ndarray|None, "y": np.ndarray|None, "metainfo": None|list[dict]},
   "test": {"X": np.ndarray, "y": np.ndarray, "metainfo": None|list[dict]}
 }
 ```
