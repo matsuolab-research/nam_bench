@@ -1,11 +1,10 @@
+import inspect
 import dataclasses
 from dataclasses import dataclass, field
 from functools import partial
 
-from torch.utils.data import Dataset
-
 import nam_bench.metrics as custom_metrics
-from nam_bench import datasets, callbacks
+from nam_bench import datasets
 
 
 def rec_getattr(obj, attr):
@@ -43,30 +42,52 @@ def rec_setattr(obj, attr, value):
         rec_setattr(getattr(obj, L[0]), '.'.join(L[1:]), value)
 
 
-@dataclass
-class EvaluationDataset():
-    name: str
-    data: Dataset
-    metainfo: dict = field(default=None)
+def return_with_kwargs(func: callable) -> callable:
+    """Decorator to return a function with kwargs
 
+    Args:
+        func (callable): A function to be decorated
 
-class Evaluator:
-    def __init__(self, metrics_dict: dict[callable]):
-        self.metrics_dict = metrics_dict
-    
-    def __call__(self, preds, ground_truth, dataset_metainfo=None): # TODO: Wrap metrics to take dataset_metainfo
-        reports = {}
-        for metric_name, metric in self.metrics_dict.items():
-            reports.update(metric(preds, ground_truth, dataset_metainfo))
+    Returns:
+        callable: Wrapped function
+    """
+    def wrapper(*args, **kwargs):
+        args_count = len(args)
+        fn_params = inspect.signature(func).parameters
         
-        return reports
+        for arg, param_name in zip(args, list(fn_params.keys())[:args_count]):
+            kwargs[param_name] = arg
+        
+        return kwargs, func(**kwargs)
+
+    return wrapper
 
 
-def get_metrics(metrics: list[str]) -> dict[callable]:
+def get_metric(metric_name: str) -> callable:
+    """Get callable metric
+
+    Args:
+        metric_name (str): Name of callable metric
+
+    Raises:
+        ValueError: Invalid metric name
+
+    Returns:
+        callable: A callable metric
+    """
+    try:
+        metric = getattr(custom_metrics, metric_name)
+    except:
+        raise ValueError("Invalid metric name: {}".format(metric_name))
+    
+    return metric
+
+
+def get_metrics(metrics: list[str]) -> dict[str, callable]:
     """Get callable metrics
 
     Args:
-        metrics[list[dict]]: list of callable metrics in str.
+        metrics[list]: str list of callable metrics.
 
     Raises:
         ValueError: Invalid metrics name
@@ -76,56 +97,29 @@ def get_metrics(metrics: list[str]) -> dict[callable]:
     """
     metrics_dict = {}
     for metric in metrics:
-        try:
-            metrics_dict[metric] = getattr(custom_metrics, metric)
-        except:
-            raise ValueError("Invalid metrics name: {}".format(metric))
+        metrics_dict[metric] = get_metric(metric)
     
     return metrics_dict
 
 
-def get_dataset(config: dict) -> EvaluationDataset:
+def get_dataset_fn(dataset_name: str) -> callable:
     """Get dataset
 
     Args:
-        config (dict): configuration for evaluation
+        dataset_name (str): Name of dataset
 
     Raises:
         ValueError: Invalid dataset name
 
     Returns:
-        EvaluationDataset: Evaluation dataset
+        (callable): A function which returns a dataset. 
+                    dataset_fn must return a dict of 
+                    {"train": {"X": dataset, "y": target, "metainfo": metainfo}, 
+                    "test": {"X": dataset, "y": target, "metainfo": metainfo}}
     """
     try:
-        tmp_dataset = getattr(datasets, config.dataset_name)
+        dataset_fn = datasets.NAME2DATASETS_FN[dataset_name]
     except:
-        raise ValueError("Invalid dataset name: {}".format(config.dataset_name))
+        raise ValueError("Invalid dataset name: {}".format(dataset_name))
     
-    tmp_dataset = tmp_dataset(config)
-    eval_datasets = EvaluationDataset(
-        name=config.dataset_name,
-        data=tmp_dataset,
-        metainfo=tmp_dataset.metainfo,
-    )
-    
-    return eval_datasets
-
-
-def get_callbacks(callbacks_config: object) -> list[callable]:
-    """Get callbacks
-
-    Args:
-        callbacks_config (object): A configuration of callbacks. 
-        The key is the name of callback and the value is the configuration for callback.
-
-    Returns:
-        dict[callable]: A dictionary of callbacks
-    """
-    callbacks_ = []
-    for callback_name, callback_config in vars(callbacks_config).items():
-        try:
-            callbacks_.append(partial(getattr(callbacks, callback_name), **vars(callback_config)))
-        except:
-            raise ValueError("Invalid callback name: {}".format(callback_name))
-    
-    return callbacks_
+    return dataset_fn

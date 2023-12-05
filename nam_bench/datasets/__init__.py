@@ -1,6 +1,6 @@
-from .digits import (
-    Digits,
-    DigitsForInpainting,
-    MaskedMovingDigits,
-)
-__all__ = ["Digits", "DigitsForInpainting", "MaskedMovingDigits"]
+from . import moving_digits
+
+
+NAME2DATASETS_FN = {
+    "MovingDigits": moving_digits.load,
+}

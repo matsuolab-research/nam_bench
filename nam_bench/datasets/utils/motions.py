@@ -2,7 +2,14 @@ import itertools
 import numpy as np
 
 
-def get_random_trajectory(seq_length: int=20, speed: float=2.5, theta: float=0.5, img_size: int=30, object_size: int=9) -> np.ndarray:
+def get_random_trajectory(
+    seq_length: int=20,
+    speed: float=2.5,
+    theta: float=0.5,
+    img_size: int=30,
+    object_size: int=9,
+    random_start: bool=False,
+) -> np.ndarray:
     """Generate a random trajectory.
 
     Args:
@@ -11,11 +18,15 @@ def get_random_trajectory(seq_length: int=20, speed: float=2.5, theta: float=0.5
         theta (float, optional): Moving direction. Defaults to 0.5.
         img_size (int, optional): Image size. Defaults to 30.
         object_size (int, optional): Object size. Defaults to 9.
+        random_start (bool, optional): Random start position. Defaults to False.
     """
     # Initialize the trajectory
     trajectory = np.zeros((seq_length, 2), dtype=np.int32)
     # Initialize the position of the object
-    position = np.random.randint(0, img_size - object_size, size=2)
+    if random_start:
+        position = np.random.randint(0, img_size - object_size, size=2)
+    else:
+        position = np.array([(img_size-object_size)//2, (img_size - object_size)//2])
     # Initialize the speed of the object
     vx, vy = np.cos(theta*2*np.pi), np.sin(theta * 2*np.pi)
     vx, vy = int(speed * vx), int(speed * vy)
@@ -43,7 +54,13 @@ def get_random_trajectory(seq_length: int=20, speed: float=2.5, theta: float=0.5
     return trajectory
 
 
-def get_sequences(seq_length: int=20, img_size: int=30, speed: float=2.5, theta: float=0.0, objects: np.ndarray=None) -> np.ndarray:
+def get_sequences(
+    seq_length: int=20,
+    img_size: int=30, 
+    speed: float=2.5, 
+    theta: float=0.0, 
+    objects: np.ndarray|None=None
+) -> np.ndarray:
     """Generate a sequence of images.
 
     Args:
