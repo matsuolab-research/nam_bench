@@ -1,8 +1,11 @@
 from pprint import pprint
+import io
 
 import numpy as np
 import torch
 import torchvision
+from matplotlib import pyplot as plt
+from PIL import Image
 
 import nam_bench
 
@@ -26,10 +29,22 @@ def img_preprocess_fn(preds: np.ndarray, labels: np.ndarray, metainfo: list[dict
         metainfo = [{} for _ in range(len(preds))]
     for i, (preds_i, labels_i, metainfo_i) in enumerate(zip(preds, labels, metainfo)):
         # 1, H, W
-        img = np.concatenate([preds_i, labels_i], axis=1)
-        img = torch.from_numpy(img).float()
-        img = torchvision.transforms.functional.to_pil_image(img)
-        img_name = f"idx-{i}_target-{metainfo_i['target']}.png"
+        # img = np.concatenate([preds_i, labels_i], axis=1)
+        # img = torch.from_numpy(img).float()
+        # img = torchvision.transforms.functional.to_pil_image(img)
+        # Use matplotlib
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        ax[0].imshow(preds_i, origin="lower")
+        ax[0].set_title("Prediction")
+        ax[1].imshow(labels_i, origin="lower")
+        ax[1].set_title("Ground Truth")
+        # Transform to PIL image
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        img = Image.open(buf).convert("RGB")
+        img_name = f"idx-{i}.png"
         yield img_name, img
 
 
@@ -38,24 +53,46 @@ if __name__ == "__main__":
     # config = eval_utils.Config(config_path=config_path) 
     
     eval_op = nam_bench.Evaluator()
-    eval_op.set_dataset_fn("MovingDigits")
+    
+    # MovingDigits Example
+    ###########################################################################
+    # eval_op.set_dataset_fn("MovingDigits")
+    # x = eval_op.get_dataset(
+    #     num_train_data=10, # NOTE: This parameter does not influence the result of evaluation.
+    #     num_test_data=10*10,
+    #     img_size=20,
+    #     seq_length=4,
+    #     obj_scales = [1.0, 1.25, 1.5, 1.25], 
+    #     # obj_scales = [1.0, 1.25, 1.5, 1.25], 
+    #     # obj_scales=[1.0, 1.0, 1.0, 1.0], 
+    #     obj_rotation_speeds=[0], 
+    #     # obj_rotation_speeds=[0, 90], 
+    #     random_start=False
+    # )
+    ###########################################################################
+    
+    # MovingBox Example
+    ###########################################################################
+    eval_op.set_dataset_fn("MovingBox")
+    fix_obj_widths = np.array((80, 50, 20, 10))
+    fix_obj_heights = np.full_like(fix_obj_widths, 20)
     x = eval_op.get_dataset(
-        num_train_data=10, # NOTE: This parameter does not influence the result of evaluation.
-        num_test_data=10*10,
-        img_size=20,
-        seq_length=4,
-        obj_scales = [1.0, 1.25, 1.5, 1.25], 
-        # obj_scales = [1.0, 1.25, 1.5, 1.25], 
-        # obj_scales=[1.0, 1.0, 1.0, 1.0], 
-        obj_rotation_speeds=[0], 
-        # obj_rotation_speeds=[0, 90], 
-        random_start=False
+        num_train_data=20,
+        num_test_data=10,
+        random_objs=False, 
+        seq_len=20, 
+        fix_obj_heights=fix_obj_heights, 
+        fix_obj_widths=fix_obj_widths, 
+        image=True
     )
+    x = x.astype(np.float32)
+    x /= 255.0 # 0~255 -> 0~1
+    ###########################################################################
     
     # Add custom metrics here.
     eval_op.add_custom_eval_fn("mean", sample_custom_eval)
-    # save_imgs_kwargs = {"save_dir": "./imgs", "preprocess_func": img_preprocess_fn}
-    # eval_op.add_custom_eval_fn("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
+    save_imgs_kwargs = {"save_dir": "./imgs", "preprocess_func": img_preprocess_fn}
+    eval_op.add_custom_eval_fn("save_imgs", nam_bench.metrics.make_imgs.save_imgs, **save_imgs_kwargs)
     
     print(eval_op) # CHeck the evaluation configuration.
     
