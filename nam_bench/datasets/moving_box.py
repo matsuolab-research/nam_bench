@@ -370,7 +370,8 @@ def get_random_orbit_imgs(
 # 実際に呼び出す関数
 def load(
     frame_size: tuple[int] = (100, 100),
-    sample_size: int = 10,
+    num_train_data: int = 10,
+    num_test_data: int = 10,
     seq_len: int = 20,
     num_objs: int = 4,
     min_height: int = 5, max_height: int = 15,
@@ -384,10 +385,12 @@ def load(
     image: bool = True,
 ) -> tuple[np.ndarray]:
     """Load moving box dataset
+    TODO: fix_parameters (dict[str, Any])で,一部のパラメータを固定できるようにする.
 
     Args:
         frame_size (tuple[int], optional): 画像サイズ. Defaults to (100, 100).
-        sample_size (int, optional): サンプル数(バッチサイズ). Defaults to 10.
+        num_train_data (int, optional): 訓練に使う物体の種類. Defaults to 10.
+        num_test_data (int, optional): テストに使う物体の種類. Defaults to 10.
         seq_len (int, optional): 系列長. Defaults to 20.
         num_objs (int, optional): 1つの系列に出てくるオブジェクトの数. Defaults to 4.
         min_height (int, optional): オブジェクトの最小の高さ(random_obj指定時に利用). Defaults to 5.
@@ -410,6 +413,8 @@ def load(
         raise ValueError("fix_obj_heights and fix_obj_widths must be specified when random_objs is False")
     if not random_objs and (len(fix_obj_heights) != num_objs or len(fix_obj_widths) != num_objs):
         raise ValueError("fix_obj_heights and fix_obj_widths must be the same length as num_objs")
+    
+    sample_size = num_train_data + num_test_data
 
     if random_objs:
         obj_orbits, obj_widths, obj_heights, periodic_times = get_random_trajectories(
@@ -432,8 +437,28 @@ def load(
             obj_widths=fix_obj_widths,
             min_periodic_time=min_periodic_time, max_periodic_time=max_periodic_time,
         )
+    
+    metainfo = [None]*sample_size
+    for i, (obj_width, obj_height, periodic_time) in enumerate(zip(obj_widths, obj_heights, periodic_times)):
+        metainfo[i] = {
+            "width": obj_width,
+            "height": obj_height,
+            "periodic_time": periodic_time,
+        }
     if not image:
-        return obj_orbits, obj_widths, obj_heights, periodic_times
+        train_test_dataset = {
+            "train": {
+                "X": obj_orbits[:num_train_data, ..., :-1],
+                "y": obj_orbits[:num_train_data, ..., -1],
+                "metainfo": metainfo[:num_train_data],
+            },
+            "test": {
+                "X": obj_orbits[num_train_data:, ..., :-1],
+                "y": obj_orbits[num_train_data:, ..., -1],
+                "metainfo": metainfo[num_train_data:],
+            },
+        }
+        return train_test_dataset
     
     # 以下レンダリング
     if color == "random":
@@ -453,4 +478,16 @@ def load(
         colors,
     )
     
-    return canvas
+    train_test_dataset = {
+        "train": {
+            "X": canvas[:num_train_data, :-1],
+            "y": canvas[:num_train_data, -1],
+            "metainfo": metainfo[:num_train_data],
+        },
+        "test": {
+            "X": canvas[num_train_data:, :-1],
+            "y": canvas[num_train_data:, -1],
+            "metainfo": metainfo[num_train_data:],
+        },
+    }
+    return train_test_dataset
