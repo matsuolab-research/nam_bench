@@ -134,18 +134,32 @@ class Evaluator:
             self._default_eval_functions[eval_fn_name] = utils.get_metric(eval_fn_name)
     
     def get_dataset(self, *args, **kwargs):
-        """Get dataset
+        """Get dataset for both training and evaluation
         args and kwargs are passed to dataset_fn. See dataset_fn for more details
         If some keyword arguments are already set in the dataset_fn_kwargs, they are overwritten by kwargs.
 
         Returns:
             Dataset: A dataset
         """
+        warnings.warn("Be careful for the leakage of test data. If you want to avoid it, please use get_eval_dataset instead of get_dataset")
         self.__dataset_fn_kwargs.update(kwargs)
         self._dataset_fn_ = utils.return_with_kwargs(self._dataset_fn) # Correspond to decorator
         self.__dataset_fn_kwargs, datasets = self._dataset_fn_(*args, **self.__dataset_fn_kwargs)
         self.__dataset_metadata = datasets["test"].get("metainfo", None)
         self.__target = datasets["test"]["y"]
+        
+        return datasets
+        
+    
+    def get_eval_dataset(self, *args, **kwargs):
+        """Get evaluation dataset(inference target) only
+        args and kwargs are passed to dataset_fn. See dataset_fn for more details
+        If some keyword arguments are already set in the dataset_fn_kwargs, they are overwritten by kwargs.
+
+        Returns:
+            Dataset: A dataset
+        """
+        datasets = self.get_dataset(*args, **kwargs)
 
         return datasets["test"]["X"]
     

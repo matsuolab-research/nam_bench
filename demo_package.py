@@ -37,7 +37,7 @@ if __name__ == "__main__":
     eval_op = nam_bench.Evaluator()
     
     eval_op.set_dataset_fn("MovingDigits")
-    x = eval_op.get_dataset(
+    x = eval_op.get_eval_dataset(
         num_train_data=10, # NOTE: This parameter does not influence the result of evaluation.
         num_test_data=10*10,
         img_size=20,

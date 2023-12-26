@@ -57,10 +57,12 @@ if __name__ == "__main__":
     
     eval_op = nam_bench.Evaluator()
     
+    # NOTE: if you want to use both train and test data, use get_dataset() instead of get_eval_dataset().
+    
     # MovingDigits Example
     ###########################################################################
     # eval_op.set_dataset_fn("MovingDigits")
-    # x = eval_op.get_dataset(
+    # x = eval_op.get_eval_dataset(
     #     num_train_data=10, # NOTE: This parameter does not influence the result of evaluation.
     #     num_test_data=10*10,
     #     img_size=20,
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     eval_op.set_dataset_fn("MovingBox")
     fix_obj_widths = np.array((15, 10, 5))
     fix_obj_heights = np.full_like(fix_obj_widths, 5)
-    x = eval_op.get_dataset(
+    x = eval_op.get_eval_dataset(
         num_train_data=20,
         num_test_data=10,
         random_objs=False,
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         fix_obj_heights=fix_obj_heights, 
         fix_obj_widths=fix_obj_widths, 
         image=True,
-        normalize=False,
+        normalize=False, # 0 ~ 255 or 0 ~ 1
     )
     x = x.astype(np.float32) # Default dtype is np.float32 [0, 1]
     ###########################################################################
