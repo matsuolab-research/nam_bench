@@ -11,10 +11,6 @@ from sklearn.model_selection import train_test_split
 from .utils import motions
 
 
-np.random.seed(0)
-random.seed(0)
-
-
 # 並進最大速度に当たるspeedを3.0から2.0に変更（5x5のパッチサイズでタスクを進めるため）
 def generate_moving_toyproblem_imgs(
     n_frames_total: int = 20,
