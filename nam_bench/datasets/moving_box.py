@@ -383,7 +383,8 @@ def load(
     ratio: float | np.ndarray | None = None,
     random_objs: bool = False,
     image: bool = True,
-) -> tuple[np.ndarray]:
+    normalize: bool = True,
+) -> dict[str, np.ndarray|list]:
     """Load moving box dataset
     TODO: fix_parameters (dict[str, Any])で,一部のパラメータを固定できるようにする.
 
@@ -405,9 +406,13 @@ def load(
         ratio (float | np.ndarray | None, optional): オブジェクトのサイズの比を固定するか？ex) 100, 50, 25, 12.5.... Defaults to None.
         random_objs (bool, optional): オブジェクトの属性をランダムに生成するか？(幅、高さ、周期). Defaults to False.
         image (bool, optional): 動画像として返すか,軌道のみを返すか. Defaults to True.
+        normalize (bool, optional): 画像を正規化するか. Defaults to True.
 
     Returns:
-        tuple[np.ndarray]: _description_
+        dict[str, np.ndarray|list]: 訓練データとテストデータを含む辞書.
+            x: image=Trueの場合は動画像, image=Falseの場合は軌道のみを返す.動画像の場合は(B, seq_len-1, H, W), 軌道の場合は(B, num_objs, seq_len-1)
+            y: image=Trueの場合は最後のフレーム, image=Falseの場合は最後の軌道のみを返す.動画像の場合は(B, H, W), 軌道の場合は(B, num_objs)
+            metainfo: 各オブジェクトの幅、高さ、周期を含む辞書のリスト. 
     """
     if not random_objs and (fix_obj_heights is None or fix_obj_widths is None):
         raise ValueError("fix_obj_heights and fix_obj_widths must be specified when random_objs is False")
@@ -477,6 +482,10 @@ def load(
         periodic_times,
         colors,
     )
+    
+    if normalize:
+        canvas = canvas.astype(np.float32)
+        canvas /= 255.0
     
     train_test_dataset = {
         "train": {
