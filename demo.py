@@ -32,11 +32,14 @@ def img_preprocess_fn(preds: np.ndarray, labels: np.ndarray, metainfo: list[dict
         # img = np.concatenate([preds_i, labels_i], axis=1)
         # img = torch.from_numpy(img).float()
         # img = torchvision.transforms.functional.to_pil_image(img)
+        
         # Use matplotlib
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-        ax[0].imshow(preds_i, origin="lower")
+        img_pred = ax[0].imshow(preds_i, origin="lower")
+        # fig.colorbar(img_pred, ax=ax[0])
         ax[0].set_title("Prediction")
-        ax[1].imshow(labels_i, origin="lower")
+        img_gt = ax[1].imshow(labels_i, origin="lower")
+        # fig.colorbar(img_gt, ax=ax[1])
         ax[1].set_title("Ground Truth")
         # Transform to PIL image
         buf = io.BytesIO()
@@ -74,19 +77,21 @@ if __name__ == "__main__":
     # MovingBox Example
     ###########################################################################
     eval_op.set_dataset_fn("MovingBox")
-    fix_obj_widths = np.array((80, 50, 20, 10))
-    fix_obj_heights = np.full_like(fix_obj_widths, 20)
+    fix_obj_widths = np.array((15, 10, 5))
+    fix_obj_heights = np.full_like(fix_obj_widths, 5)
     x = eval_op.get_dataset(
         num_train_data=20,
         num_test_data=10,
-        random_objs=False, 
+        random_objs=False,
         seq_len=20, 
+        num_objs=3,
+        frame_size=(20, 20),
         fix_obj_heights=fix_obj_heights, 
         fix_obj_widths=fix_obj_widths, 
-        image=True
+        image=True,
+        normalize=False,
     )
-    x = x.astype(np.float32)
-    x /= 255.0 # 0~255 -> 0~1
+    x = x.astype(np.float32) # Default dtype is np.float32 [0, 1]
     ###########################################################################
     
     # Add custom metrics here.
