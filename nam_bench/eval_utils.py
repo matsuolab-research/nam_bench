@@ -159,7 +159,9 @@ class Evaluator:
         Returns:
             Dataset: A dataset
         """
+        warnings.filterwarnings("ignore", category=UserWarning)
         datasets = self.get_dataset(*args, **kwargs)
+        warnings.resetwarnings()
 
         return datasets["test"]["X"]
     
