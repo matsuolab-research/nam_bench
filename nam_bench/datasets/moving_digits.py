@@ -37,6 +37,8 @@ def generate_moving_toyproblem_imgs(
     Returns:
         list[np.ndarray]: _description_
     """
+    if len(obj_scales) != n_frames_total:
+        raise ValueError(f"obj_scales must be the same length as n_frames_total but got {len(obj_scales)} and {n_frames_total}")
 
     max_scale = max(obj_scales)
     data_list = [None] * object_array.shape[0]
