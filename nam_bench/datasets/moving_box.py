@@ -487,10 +487,10 @@ def load(
         canvas = canvas.astype(np.float32)
         canvas /= 255.0
     
-    X_train = canvas[:num_train_data, :-1]
+    X_train = canvas[:num_train_data]
     y_train = canvas[:num_train_data, -1]
     X_train[:, -1] = 0
-    X_test = canvas[num_train_data:, :-1]
+    X_test = canvas[num_train_data:]
     y_test = canvas[num_train_data:, -1]
     X_test[:, -1] = 0
     
