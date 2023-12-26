@@ -487,15 +487,22 @@ def load(
         canvas = canvas.astype(np.float32)
         canvas /= 255.0
     
+    X_train = canvas[:num_train_data, :-1]
+    y_train = canvas[:num_train_data, -1]
+    X_train[:, -1] = 0
+    X_test = canvas[num_train_data:, :-1]
+    y_test = canvas[num_train_data:, -1]
+    X_test[:, -1] = 0
+    
     train_test_dataset = {
         "train": {
-            "X": canvas[:num_train_data, :-1],
-            "y": canvas[:num_train_data, -1],
+            "X": X_train,
+            "y": y_train,
             "metainfo": metainfo[:num_train_data],
         },
         "test": {
-            "X": canvas[num_train_data:, :-1],
-            "y": canvas[num_train_data:, -1],
+            "X": X_test,
+            "y": y_test,
             "metainfo": metainfo[num_train_data:],
         },
     }
